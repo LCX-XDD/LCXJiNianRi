@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <!-- 核心：全局禁止缩放和双击放大 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <title>我们的纪念日</title>
+  <!-- iOS 桌面图标 -->
+  <link rel="apple-touch-icon" sizes="180x180" href="https://cdn-icons-png.flaticon.com/128/6723/6723246.png">
+  <!-- 浏览器标签页小图标 -->
+  <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/128/6723/6723246.png">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- 外层毛玻璃容器：把三张卡片包成一个整体，居中显示 -->
+  <main class="wrapper">
+
+    <!-- 顶部卡片：用户1 生日倒计时 -->
+    <section class="card birthday-card" id="user1-card">
+      <div class="label">
+        <!-- 蛋糕小图标 -->
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 21h16v-3a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v3z"/>
+          <path d="M12 15v-2M12 7v2M9.5 9h5"/>
+        </svg>
+        <span id="user1-label">距离小邓的生日</span>
+      </div>
+      <div class="time" id="user1-time">--:--:--:--</div>
+      <div class="divider"></div>
+      <div class="sub-date" id="user1-date">----年--月--日</div>
+    </section>
+
+    <!-- 中部卡片：纪念日（视觉核心） -->
+    <section class="card anniversary-card" id="anniversary-card">
+      <div class="label">
+        <!-- 信封小图标 -->
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="5" width="18" height="14" rx="2"/>
+          <path d="m3 7 9 6 9-6"/>
+        </svg>
+        <span id="anniversary-label">我们在一起</span>
+      </div>
+
+      <!-- 超大天数 -->
+      <div class="big-days">
+        <span class="days" id="anniversary-days">0</span>
+        <span class="days-unit">天</span>
+      </div>
+
+      <!-- 分隔线 + 起始日期 -->
+      <div class="divider"></div>
+      <div class="sub-date" id="anniversary-subdate">2024-06-27</div>
+
+      <!-- 今日已过去的时分秒（累加，到 23:59:59 后自然归 00:00:00、天数 +1） -->
+      <div class="sub-time" id="anniversary-subtime">--:--:--</div>
+    </section>
+
+    <!-- 底部卡片：用户2 生日倒计时 -->
+    <section class="card birthday-card" id="user2-card">
+      <div class="label">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 21h16v-3a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v3z"/>
+          <path d="M12 15v-2M12 7v2M9.5 9h5"/>
+        </svg>
+        <span id="user2-label">距离小李的生日</span>
+      </div>
+      <div class="time" id="user2-time">--:--:--:--</div>
+      <div class="divider"></div>
+      <div class="sub-date" id="user2-date">----年--月--日</div>
+    </section>
+
+    <!-- 最底部：随机情侣文案 -->
+    <p class="love-quote" id="love-quote"></p>
+
+  </main>
+
+  <!-- 生日祝福全屏特效（礼花 + 居中祝福） -->
+  <div class="overlay" id="overlay">
+    <div class="wish" id="overlay-wish"></div>
+  </div>
+
+  <!-- 配置文件必须先引入，主逻辑后引入 -->
+  <script src="js/config.js"></script>
+  <script src="js/script.js"></script>
+</body>
+</html>

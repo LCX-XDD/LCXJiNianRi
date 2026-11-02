@@ -1,0 +1,302 @@
+/* ============================================================
+ *  纪念日网页 · 样式表（粉色调）
+ *  布局：外层毛玻璃容器撑满屏幕，内部三卡片等高拉伸
+ * ============================================================ */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+body {
+  /* 粉色渐变背景 */
+  background: linear-gradient(135deg, #ffd6e0 0%, #ffe4ec 50%, #ffc9d6 100%);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei",
+               "Helvetica Neue", Helvetica, Arial, sans-serif;
+  color: #b8456a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 16px;
+  overflow-x: hidden;
+}
+
+/* ---------- 外层毛玻璃容器 ---------- */
+.wrapper {
+  width: 100%;
+  max-width: 540px;
+  min-height: calc(100vh - 16px);
+  min-height: calc(100dvh - 16px);
+  padding: 18px;
+  border-radius: 32px;
+  background: rgba(255, 240, 245, 0.45);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 20px 60px rgba(200, 100, 130, 0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ---------- 卡片通用：flex:1 自动等高撑满 ---------- */
+.card {
+  width: 100%;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 36px 24px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 8px 24px rgba(200, 100, 130, 0.12);
+  text-align: center;
+  transition: transform 0.35s ease, box-shadow 0.35s ease;
+}
+
+.card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 14px 32px rgba(200, 100, 130, 0.2);
+}
+
+/* ---------- 卡片小标题（带图标） ---------- */
+.label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: 1px;
+  color: #d4789a;
+  margin-bottom: 18px;
+}
+.label svg {
+  color: #e88aa8;
+  flex-shrink: 0;
+}
+
+/* ---------- 生日卡片时间 ---------- */
+.birthday-card .time {
+  font-family: "SF Mono", "Menlo", "Consolas", "Courier New", monospace;
+  font-size: 34px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 2px;
+  color: #c2507a;
+  display: inline-flex;
+  align-items: baseline;
+  justify-content: center;
+  line-height: 1.2;
+  margin-bottom: 22px;
+}
+.birthday-card .divider {
+  margin-bottom: 14px;
+}
+
+/* ---------- 中间纪念日卡片 ---------- */
+.anniversary-card {
+  padding: 40px 24px;
+  background: rgba(255, 255, 255, 0.78);
+}
+.anniversary-card .label {
+  font-size: 18px;
+  font-weight: 600;
+  color: #c2507a;
+}
+
+/* 超大天数 */
+.big-days {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 12px;
+  margin: 8px 0 18px;
+}
+.big-days .days {
+  font-family: "SF Mono", "Menlo", "Consolas", "Courier New", monospace;
+  font-size: 120px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #c2507a;
+  line-height: 1;
+  letter-spacing: 2px;
+}
+.big-days .days-unit {
+  font-size: 24px;
+  color: #d4789a;
+  font-weight: 500;
+}
+
+/* 分隔线 */
+.divider {
+  width: 70%;
+  height: 1px;
+  margin: 0 auto 14px;
+  background: linear-gradient(90deg, transparent, rgba(212, 120, 154, 0.5), transparent);
+}
+
+/* 起始日期 */
+.sub-date {
+  font-size: 14px;
+  color: #d4789a;
+  letter-spacing: 1px;
+  margin-bottom: 20px;
+}
+
+/* 今日已过去的时分秒 */
+.sub-time {
+  font-family: "SF Mono", "Menlo", "Consolas", "Courier New", monospace;
+  font-size: 34px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 2px;
+  color: #c2507a;
+  display: inline-flex;
+  align-items: baseline;
+  justify-content: center;
+  line-height: 1.2;
+}
+
+/* ---------- 逐位数字动画 ---------- */
+.digit {
+  display: inline-block;
+  min-width: 0.62em;
+  text-align: center;
+  will-change: transform, opacity;
+}
+.digit.changed {
+  animation: digitChange 0.55s cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+@keyframes digitChange {
+  0%   { opacity: 0.2; transform: translateY(-6px); }
+  100% { opacity: 1;   transform: translateY(0); }
+}
+.colon {
+  display: inline-block;
+  padding: 0 0.08em;
+  opacity: 0.7;
+}
+
+/* 生日当天替换文字 */
+.wish-text {
+  font-size: 22px;
+  font-weight: 600;
+  color: #d2607c;
+  padding: 10px 0;
+}
+
+/* ---------- 底部随机情话 ---------- */
+.love-quote {
+  text-align: center;
+  font-size: clamp(11px, 1.4vw, 13px);
+  line-height: 1.7;
+  color: #d4789a;
+  padding: 6px 12px 2px;
+  letter-spacing: 0.5px;
+  min-height: 20px;
+  max-width: 100%;
+  word-break: break-word;
+}
+
+/* ============================================================
+ *  生日祝福特效
+ * ============================================================ */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(120, 40, 70, 0.45);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  opacity: 0;
+  transition: opacity 0.6s ease;
+}
+.overlay.show {
+  display: flex;
+  opacity: 1;
+}
+.overlay .wish {
+  position: relative;
+  z-index: 2;
+  font-size: 32px;
+  font-weight: 700;
+  color: #fff;
+  text-align: center;
+  padding: 0 24px;
+  text-shadow: 0 4px 20px rgba(255, 150, 180, 0.8);
+  animation: wishPop 1.2s cubic-bezier(0.2, 0.8, 0.3, 1.2) both;
+}
+@keyframes wishPop {
+  0%   { transform: scale(0.4); opacity: 0; }
+  60%  { transform: scale(1.08); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.confetti {
+  position: absolute;
+  top: -20px;
+  width: 10px;
+  height: 16px;
+  opacity: 0.9;
+  z-index: 1;
+  animation: confettiFall linear infinite;
+}
+@keyframes confettiFall {
+  0%   { transform: translateY(-20px) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(105vh) rotate(720deg); opacity: 0.7; }
+}
+
+/* ============================================================
+ *  响应式：手机竖屏
+ * ============================================================ */
+@media (max-width: 480px) {
+  body {
+    padding: 6px 8px;
+  }
+  .wrapper {
+    min-height: calc(100vh - 12px);
+    min-height: calc(100dvh - 12px);
+    padding: 14px;
+    border-radius: 24px;
+    gap: 12px;
+  }
+  .card {
+    padding: 26px 18px;
+    border-radius: 20px;
+  }
+  .birthday-card .time {
+    font-size: 26px;
+  }
+  .anniversary-card {
+    padding: 30px 18px;
+  }
+  .big-days .days {
+    font-size: 84px;
+  }
+  .big-days .days-unit {
+    font-size: 20px;
+  }
+  .sub-time {
+    font-size: 26px;
+  }
+  .overlay .wish {
+    font-size: 26px;
+  }
+  .love-quote {
+    font-size: 12px;
+  }
+}
