@@ -13,13 +13,10 @@ html, body {
   width: 100%;
   height: 100%;
   overflow: hidden;       /* 禁止上下滑动 */
-  position: fixed;       /* iOS 上彻底锁死视口 */
-  top: 0;
-  left: 0;
 }
 
 body {
-  /* 柔和浅粉渐变（不刺眼，文字可读） */
+  /* 柔和浅粉渐变（全屏统一背景） */
   background: linear-gradient(160deg, #ffc9d6 0%, #ffdfe6 50%, #ffb8cc 100%);
   font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei",
                "Helvetica Neue", Helvetica, Arial, sans-serif;
@@ -28,24 +25,20 @@ body {
   align-items: center;
   justify-content: center;
   padding: 8px 16px;
+  /* iOS 安全区适配 */
+  padding-top: calc(8px + env(safe-area-inset-top));
+  padding-bottom: calc(8px + env(safe-area-inset-bottom));
 }
 
-/* ---------- 外层毛玻璃容器 ---------- */
+/* ---------- 外层容器（背景透明，只起布局作用，颜色统一） ---------- */
 .wrapper {
   width: 100%;
   max-width: 540px;
-  height: calc(100vh - 16px);
-  height: calc(100dvh - 16px);
-  padding: 18px;
-  border-radius: 32px;
-  background: rgba(255, 255, 255, 0.25);
-  backdrop-filter: blur(20px) saturate(150%);
-  -webkit-backdrop-filter: blur(20px) saturate(150%);
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  box-shadow: 0 20px 60px rgba(150, 40, 80, 0.25);
+  height: 100%;
+  padding: 10px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
 }
 
 /* ---------- 卡片通用：flex:1 自动等高撑满 ---------- */
@@ -271,10 +264,7 @@ body {
     padding: 6px 8px;
   }
   .wrapper {
-    height: calc(100vh - 12px);
-    height: calc(100dvh - 12px);
-    padding: 14px;
-    border-radius: 24px;
+    padding: 6px;
     gap: 12px;
   }
   .card {
