@@ -370,24 +370,56 @@
     }
   }
 
-  async function loadLoveQuote() {
-    showQuoteLoading();
-    const apis = CONFIG.loveApis || [];
-    for (let i = 0; i < apis.length; i++) {
-      try {
-        const resp = await fetch(apis[i], { method: 'GET', cache: 'no-store' });
-        if (!resp.ok) continue;
-        const raw = await resp.text();
+  // 单个请求加超时（AbortController）
+  async function fetchWithTimeout(url, ms) {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), ms);
+    try {
+      const resp = await fetch(url, {
+        method: 'GET',
+        cache: 'no-store',
+        credentials: 'omit',
+        mode: 'cors',
+        signal: ctrl.signal
+      });
+      if (!resp.ok) throw new Error('http ' + resp.status);
+      return await resp.text();
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  // 并行请求两个 API，谁先返回用谁；5 秒内都没回来就 reject
+  function tryOnce(apis, timeoutMs) {
+    const tasks = apis.map(url =>
+      fetchWithTimeout(url, timeoutMs).then(raw => {
         const text = extractQuote(raw);
-        if (text && text.length > 2) {
-          showQuote(text);
-          return;
-        }
+        if (text && text.length > 2) return text;
+        throw new Error('bad text');
+      })
+    );
+    return Promise.any(tasks);
+  }
+
+  async function loadLoveQuote() {
+    // 1) 先显示加载小转圈，不直接出本地文案
+    showQuoteLoading();
+
+    const apis = CONFIG.loveApis || [];
+    const MAX_ROUNDS = 2;     // 最多两轮
+    const PER_ROUND_TIMEOUT = 5000;  // 每轮 5 秒
+
+    for (let round = 1; round <= MAX_ROUNDS; round++) {
+      try {
+        const text = await tryOnce(apis, PER_ROUND_TIMEOUT);
+        showQuote(text);
+        return;
       } catch (e) {
-        // 当前接口失败，尝试下一个
+        // 本轮两个都超时/失败，进入下一轮
       }
     }
-    // 全部失败 → 本地兜底
+
+    // 2) 两轮都失败 → 本地兜底
     const pool = CONFIG.backupLoveQuotes || [];
     if (pool.length) {
       showQuote(pool[Math.floor(Math.random() * pool.length)]);
