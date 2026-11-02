@@ -77,7 +77,7 @@ body {
   font-weight: 500;
   letter-spacing: 1px;
   color: #d4789a;
-  margin-bottom: clamp(8px, 2vh, 18px);
+  margin-bottom: clamp(4px, 1.2vh, 14px);
 }
 .label svg {
   color: #e88aa8;
@@ -89,7 +89,7 @@ body {
 /* ---------- 生日卡片时间 ---------- */
 .birthday-card .time {
   font-family: "SF Mono", "Menlo", "Consolas", "Courier New", monospace;
-  font-size: clamp(20px, 5.5vh, 34px);
+  font-size: clamp(18px, 4.5vh, 32px);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   letter-spacing: 1px;
@@ -98,10 +98,10 @@ body {
   align-items: baseline;
   justify-content: center;
   line-height: 1.2;
-  margin-bottom: clamp(10px, 2.5vh, 22px);
+  margin-bottom: clamp(6px, 1.5vh, 18px);
 }
 .birthday-card .divider {
-  margin-bottom: clamp(6px, 1.5vh, 14px);
+  margin-bottom: clamp(4px, 1.2vh, 12px);
 }
 
 /* ---------- 中间纪念日卡片 ---------- */
@@ -120,11 +120,11 @@ body {
   align-items: baseline;
   justify-content: center;
   gap: clamp(6px, 1.5vw, 12px);
-  margin: clamp(4px, 1.5vh, 8px) 0 clamp(8px, 2vh, 18px);
+  margin: clamp(2px, 1vh, 8px) 0 clamp(4px, 1.2vh, 14px);
 }
 .big-days .days {
   font-family: "SF Mono", "Menlo", "Consolas", "Courier New", monospace;
-  font-size: clamp(56px, 16vh, 120px);
+  font-size: clamp(44px, 11vh, 110px);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   color: #c2507a;
@@ -132,31 +132,31 @@ body {
   letter-spacing: 2px;
 }
 .big-days .days-unit {
-  font-size: clamp(16px, 3.5vh, 24px);
+  font-size: clamp(14px, 3vh, 24px);
   color: #d4789a;
   font-weight: 500;
 }
 
 /* 分隔线 */
 .divider {
-  width: 70%;
+  width: 60%;
   height: 1px;
-  margin: 0 auto clamp(6px, 1.5vh, 14px);
+  margin: 0 auto clamp(4px, 1.2vh, 12px);
   background: linear-gradient(90deg, transparent, rgba(212, 120, 154, 0.5), transparent);
 }
 
 /* 起始日期 */
 .sub-date {
-  font-size: clamp(12px, 2vh, 14px);
+  font-size: clamp(11px, 1.8vh, 14px);
   color: #d4789a;
   letter-spacing: 1px;
-  margin-bottom: clamp(8px, 2vh, 20px);
+  margin-bottom: clamp(4px, 1.2vh, 16px);
 }
 
 /* 今日已过去的时分秒 */
 .sub-time {
   font-family: "SF Mono", "Menlo", "Consolas", "Courier New", monospace;
-  font-size: clamp(20px, 5.5vh, 34px);
+  font-size: clamp(18px, 4.5vh, 32px);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   letter-spacing: 1px;
