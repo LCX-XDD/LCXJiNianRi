@@ -11,8 +11,11 @@
 
 html, body {
   width: 100%;
-  min-height: 100vh;
-  min-height: 100dvh;
+  height: 100%;
+  overflow: hidden;       /* 禁止上下滑动 */
+  position: fixed;       /* iOS 上彻底锁死视口 */
+  top: 0;
+  left: 0;
 }
 
 body {
@@ -25,15 +28,14 @@ body {
   align-items: center;
   justify-content: center;
   padding: 8px 16px;
-  overflow-x: hidden;
 }
 
 /* ---------- 外层毛玻璃容器 ---------- */
 .wrapper {
   width: 100%;
   max-width: 540px;
-  min-height: calc(100vh - 16px);
-  min-height: calc(100dvh - 16px);
+  height: calc(100vh - 16px);
+  height: calc(100dvh - 16px);
   padding: 18px;
   border-radius: 32px;
   background: rgba(255, 240, 245, 0.45);
@@ -268,8 +270,8 @@ body {
     padding: 6px 8px;
   }
   .wrapper {
-    min-height: calc(100vh - 12px);
-    min-height: calc(100dvh - 12px);
+    height: calc(100vh - 12px);
+    height: calc(100dvh - 12px);
     padding: 14px;
     border-radius: 24px;
     gap: 12px;
