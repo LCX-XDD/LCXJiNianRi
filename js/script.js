@@ -322,55 +322,76 @@
 
   /* ==========================================================
    *  七、随机情话：先请求 API，失败用本地兜底
-   *  窄屏（手机）自动避开长文案，避免换行撑高
+   *  长文案自动跑马灯（从右往左循环）；加载时显示小转圈
    * ========================================================== */
-  // 手机端认为多少字以内算"短"
-  const MOBILE_MAX_LEN = 22;
-  function isMobileNarrow() {
-    return window.innerWidth <= 480;
-  }
-  // 从文案池里挑一条"合适"的：窄屏优先短文案
-  function pickSuitable(pool) {
-    const narrow = isMobileNarrow();
-    const shortPool = pool.filter(q => q.length <= MOBILE_MAX_LEN);
-    const src = (narrow && shortPool.length) ? shortPool : pool;
-    return src[Math.floor(Math.random() * src.length)];
+  function showQuote(text) {
+    const container = el('love-quote');
+    container.innerHTML = '';
+    container.classList.remove('marquee');
+
+    const inner = document.createElement('span');
+    inner.className = 'quote-text';
+    inner.textContent = '“' + text + '”';
+    container.appendChild(inner);
+
+    // 等下一帧测量宽度，超容器就加跑马灯
+    requestAnimationFrame(() => {
+      const cw = container.clientWidth;
+      const iw = inner.scrollWidth;
+      if (iw > cw + 4) {
+        // 包一层 marquee-inner，放两份文本，整体左移 -50% 实现无缝循环
+        container.innerHTML = '';
+        const track = document.createElement('span');
+        track.className = 'marquee-track';
+        const t1 = inner.cloneNode(true);
+        const t2 = inner.cloneNode(true);
+        track.appendChild(t1);
+        track.appendChild(t2);
+        container.appendChild(track);
+        container.classList.add('marquee');
+      }
+    });
   }
 
-  function showQuote(text) {
-    // 窄屏且文案过长时，丢弃 API 长文案，换本地短的
-    if (isMobileNarrow() && text.length > MOBILE_MAX_LEN) {
-      showQuote(pickSuitable(CONFIG.backupLoveQuotes || []));
-      return;
+  // 显示加载小转圈
+  function showQuoteLoading() {
+    const container = el('love-quote');
+    container.innerHTML = '<span class="spinner"></span>';
+  }
+
+  // 从 API 返回的原始文本/JSON 里抽出情话
+  function extractQuote(raw) {
+    const t = raw.trim();
+    try {
+      const j = JSON.parse(t);
+      return j.hitokoto || j.data || j.love || j.content || j.text || '';
+    } catch (e) {
+      return t;
     }
-    el('love-quote').textContent = '“' + text + '”';
   }
 
   async function loadLoveQuote() {
+    showQuoteLoading();
     const apis = CONFIG.loveApis || [];
     for (let i = 0; i < apis.length; i++) {
       try {
         const resp = await fetch(apis[i], { method: 'GET', cache: 'no-store' });
         if (!resp.ok) continue;
         const raw = await resp.text();
-        let text = '';
-        try {
-          const json = JSON.parse(raw);
-          text = json.data || json.love || json.content || json.text || '';
-        } catch (e) {
-          text = raw.trim();
-        }
+        const text = extractQuote(raw);
         if (text && text.length > 2) {
-          // 窄屏长文案会在 showQuote 里自动换短的
           showQuote(text);
           return;
         }
       } catch (e) {
-        // 接口失败，尝试下一个
+        // 当前接口失败，尝试下一个
       }
     }
-    // 全部失败 → 本地兜底随机一条
-    showQuote(pickSuitable(CONFIG.backupLoveQuotes || []));
+    // 全部失败 → 本地兜底
+    const pool = CONFIG.backupLoveQuotes || [];
+    if (pool.length) {
+      showQuote(pool[Math.floor(Math.random() * pool.length)]);
+    }
   }
 
   /* ==========================================================
