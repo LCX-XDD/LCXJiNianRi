@@ -182,6 +182,9 @@
   // 缓存每个卡片上一次的时间字符串，用于逐位对比
   const lastTimeStr = { user1: '', user2: '', anniversary: '' };
 
+  // 加载动画结束恢复渲染时置 true：一次性抑制 digitChange，静默对齐实时值（避免"停了又跳一下"）
+  let suppressDigitAnim = false;
+
   /**
    * 把时间字符串逐位渲染到 DOM，只有和上次不同的位才加动画
    * @param {HTMLElement} targetEl  时间容器
@@ -196,7 +199,7 @@
       if (ch === ':') {
         html += '<span class="colon">:</span>';
       } else {
-        const changed = oldStr[i] !== ch;
+        const changed = !suppressDigitAnim && oldStr[i] !== ch;
         html += '<span class="digit' + (changed ? ' changed' : '') + '">' + ch + '</span>';
       }
     }
@@ -232,7 +235,10 @@
       const remainMs = nextMs - nowBeijingMs();
       timeEl.classList.add('time');
       timeEl.classList.remove('wish-text');
-      renderTimeDigits(timeEl, formatDuration(remainMs), prefix);
+      // 加载动画进行中时跳过写入，由 count-up 接管
+      if (!countUpActive[prefix + '-time']) {
+        renderTimeDigits(timeEl, formatDuration(remainMs), prefix);
+      }
       if (dateEl) dateEl.textContent = msToBeijingDateCn(nextMs);
     }
   }
@@ -257,9 +263,11 @@
     const totalSec = Math.max(0, Math.floor(diffMs / 1000));
     const days = Math.floor(totalSec / 86400);
 
-    // 超大天数（逐位动画）
+    // 超大天数（逐位动画）；count-up 动画进行中时跳过，由动画接管
     const daysEl = el('anniversary-days');
-    renderTimeDigits(daysEl, String(days), 'anniversary-days');
+    if (!countUpActive['anniversary-days']) {
+      renderTimeDigits(daysEl, String(days), 'anniversary-days');
+    }
 
     // 起始日期（只渲染一次也行，但每秒设置也无害）
     el('anniversary-subdate').textContent =
@@ -267,13 +275,283 @@
 
     // 今日已过去的时分秒（累加，跨天自动归 0、天数 +1）
     const subTimeEl = el('anniversary-subtime');
-    renderTimeDigits(subTimeEl, todayElapsedHMS(), 'anniversary-subtime');
+    if (!countUpActive['anniversary-subtime']) {
+      renderTimeDigits(subTimeEl, todayElapsedHMS(), 'anniversary-subtime');
+    }
   }
 
   function tick() {
     renderBirthdayCard('user1', CONFIG.user1);
     renderBirthdayCard('user2', CONFIG.user2);
     renderAnniversary();
+  }
+
+  /* ==========================================================
+   *  五·五、页面加载 count-up：所有数字从 0 滚动到真实值
+   *   - 超大天数：整体单段滚动
+   *   - 生日倒计时"天:时:分:秒"：按 天→时→分→秒 错峰启动滚动
+   *   - 今日已过"时:分:秒"：按 时→分→秒 错峰启动滚动
+   *  缓动：easeOutCubic（先快后慢），每段 1500ms
+   * ========================================================== */
+  const LOAD_DURATION = 1500;     // 每段动画时长
+  const SEG_DELAY_STEP = 140;     // 相邻两段启动间隔（天最先启动）
+  const countUpActive = {};       // 元素 id → 是否正在加载动画
+
+  // 单段数字滚动（从 0 到目标；getTarget 每帧取最新目标，秒位可动态追实时值，避免结束滞后跳变）
+  function countUpSegment(el, getTarget, duration, padWidth, onDone) {
+    let start = null;
+    const tick = (now) => {
+      if (start === null) start = now;
+      const t = Math.min(1, (now - start) / duration);
+      const target = getTarget();
+      let v = Math.floor(target * (1 - Math.pow(1 - t, 3)));
+      if (padWidth) v = String(v).padStart(padWidth, '0');
+      el.textContent = v;
+      if (t < 1) {
+        requestAnimationFrame(tick);
+      } else {
+        // 结束帧同样按最新目标 + 目标位宽显示，恢复逐位渲染瞬间无内容跳变
+        const fin = getTarget();
+        el.textContent = padWidth ? String(fin).padStart(padWidth, '0') : fin;
+        if (onDone) onDone();
+      }
+    };
+    requestAnimationFrame(tick);
+  }
+
+  // 单个数字整体滚动（如超大天数，目标固定）
+  function countUpSingle(el, target, duration, onDone) {
+    countUpActive[el.id] = true;
+    countUpSegment(el, () => target, duration, 0, () => {
+      countUpActive[el.id] = false;
+      if (onDone) onDone();
+    });
+  }
+
+  /**
+   * 分段滚动："天:时:分:秒" 或 "时:分:秒"
+   * 天最先启动，其次小时、分钟、秒依次错峰；动画期间保持位宽避免布局抖动
+   * getTargetStr 每帧取最新完整时间串：秒位目标动态追实时值，其余位目标固定
+   */
+  function countUpTimeSegments(el, getTargetStr, onDone) {
+    countUpActive[el.id] = true;
+    const parts = getTargetStr().split(':');
+    el.innerHTML = '';
+    const segs = [];
+    parts.forEach((part, i) => {
+      if (i > 0) {
+        const colon = document.createElement('span');
+        colon.className = 'colon';
+        colon.textContent = ':';
+        el.appendChild(colon);
+      }
+      const seg = document.createElement('span');
+      seg.className = 'digit';
+      seg.style.minWidth = part.length + 'ch'; // 滚动期间数字位数会变，固定位宽
+      seg.textContent = '0';
+      el.appendChild(seg);
+      segs.push(seg);
+    });
+
+    let remaining = segs.length;
+    segs.forEach((seg, i) => {
+      setTimeout(() => {
+        const isLast = i === segs.length - 1; // 秒位（最右）动态追实时值
+        const getTarget = isLast
+          ? () => parseInt(getTargetStr().split(':')[i], 10)
+          : () => parseInt(parts[i], 10);
+        countUpSegment(seg, getTarget, LOAD_DURATION, parts[i].length, () => {
+          remaining--;
+          if (remaining === 0) {
+            countUpActive[el.id] = false;
+            if (onDone) onDone();
+          }
+        });
+      }, i * SEG_DELAY_STEP);
+    });
+  }
+
+  // 生日倒计时加载动画（生日当天直接显示祝福文字，不走滚动）
+  function startCountUpTime(prefix, userCfg) {
+    const timeEl = el(prefix + '-time');
+    if (isBirthdayToday(userCfg)) {
+      timeEl.textContent = userCfg.birthdayWish;
+      timeEl.classList.add('wish-text');
+      timeEl.classList.remove('time');
+      lastTimeStr[prefix] = '';
+      return;
+    }
+    const nextMs = nextBirthdayMs(userCfg);
+    countUpTimeSegments(timeEl, () => formatDuration(nextMs - nowBeijingMs()), () => {
+      // 静默对齐实时值：恢复逐位渲染时不触发 digitChange，避免"停了又跳一下"
+      suppressDigitAnim = true;
+      renderBirthdayCard(prefix, userCfg);
+      suppressDigitAnim = false;
+    });
+  }
+
+  /* ==========================================================
+   *  五·六、标题乱码解码效果（参考用户提供的 scramble 逻辑）
+   *  50ms/帧，每 3 帧解码一个字符，全部解码后停止；
+   *  乱码池用高频汉字，避免中文字宽差异造成标题抖动
+   * ========================================================== */
+  function scrambleDecode(el, target) {
+    const chars = '的一是不了有和人这中大为上个国我以要他时来用们生到作地于出就分对成会可主发年动同工也能下过子说产种面而方后多定行学法所民得经十三之进着等部度家电力里如水化高自二理起小物现实加量都两体制机当使点从业本去把性好应开它合还因由其些然前外天政四日那社义事平形相全表间样与关各重新线内数正心反你明看原又么利比或但质气第向道命此变条只没结解问意建月公无系军很情者最立代想已通并提直题党程展五果料象员革位入常文总次品式活设及管特件长求老头基资边流路级少图山统接知较将组见计别她手角期根论运农指几九区强放决西被干做必战先回则任取据处队南给色光门即保治北造百规热领七海口东导器压志世金增争济阶油思术极交受联什认六共权收证改清己美再采转更单风切打白教速花带安场身车例真务具万每目至达走积示议声报斗完类八离华名确才科张信马节话米整空元况今集温传土许步群广石记需段研界拉林律叫且究纬越影织礼气株检足';
+    let frame = 0;
+    const interval = setInterval(() => {
+      el.textContent = target.split('').map((c, i) =>
+        i < frame / 3 ? c : chars[Math.floor(Math.random() * chars.length)]
+      ).join('');
+      if (frame++ > target.length * 3) clearInterval(interval);
+    }, 50);
+  }
+
+  /* ==========================================================
+   *  五·七、背景爱心粒子（纯 Canvas 2D，全屏飘落小爱心）
+   *  两层：后层（卡片后面）数量多、密度高；前层（卡片前面）少量漂浮
+   *  用相对坐标(0~1)存储位置，窗口大小变化自动自适应
+   * ========================================================== */
+  function initBgParticles() {
+    const bgCanvas = el('bg-canvas');
+    const fgCanvas = el('fg-canvas');
+    if (!bgCanvas || !fgCanvas) return;
+
+    const bgCtx = bgCanvas.getContext('2d');
+    const fgCtx = fgCanvas.getContext('2d');
+    if (!bgCtx || !fgCtx) return;
+
+    let W, H;
+    function resize() {
+      W = window.innerWidth;
+      H = window.innerHeight;
+      bgCanvas.width = W;
+      bgCanvas.height = H;
+      fgCanvas.width = W;
+      fgCanvas.height = H;
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    // 画一个小爱心路径（size 是爱心的大致宽度）
+    function drawHeart(ctx, x, y, size, color, alpha) {
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      const s = size;
+      ctx.moveTo(x, y + s * 0.3);
+      ctx.bezierCurveTo(x, y, x - s / 2, y, x - s / 2, y + s * 0.3);
+      ctx.bezierCurveTo(x - s / 2, y + s * 0.6, x, y + s * 0.8, x, y + s);
+      ctx.bezierCurveTo(x, y + s * 0.8, x + s / 2, y + s * 0.6, x + s / 2, y + s * 0.3);
+      ctx.bezierCurveTo(x + s / 2, y, x, y, x, y + s * 0.3);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    const pinkColors = ['#ff8fab', '#ffb3c6', '#ffc2d1', '#ff7096', '#ffafcc'];
+
+    // ===== 后层粒子（卡片后面，数量多、密度高） =====
+    const BACK_COUNT = 130;
+    const backParticles = [];
+    for (let i = 0; i < BACK_COUNT; i++) {
+      backParticles.push({
+        rx: Math.random(),
+        ry: Math.random(),
+        size: 5 + Math.random() * 10,
+        speedY: 0.0005 + Math.random() * 0.0015,
+        speedX: (Math.random() - 0.5) * 0.0003,
+        alpha: 0.28 + Math.random() * 0.4,    // 透明度调高：0.28~0.68
+        color: pinkColors[Math.floor(Math.random() * pinkColors.length)],
+        swayPhase: Math.random() * Math.PI * 2,
+        swaySpeed: 0.008 + Math.random() * 0.015
+      });
+    }
+
+    // ===== 前层粒子（卡片前面，少量漂浮、若隐若现） =====
+    const FRONT_COUNT = 20;
+    const frontParticles = [];
+    for (let i = 0; i < FRONT_COUNT; i++) {
+      frontParticles.push({
+        rx: Math.random(),
+        ry: Math.random(),
+        size: 8 + Math.random() * 10,
+        speedY: 0.0003 + Math.random() * 0.0008,
+        speedX: (Math.random() - 0.5) * 0.0004,
+        alpha: 0.4 + Math.random() * 0.3,      // 透明度调高：0.4~0.7
+        color: pinkColors[Math.floor(Math.random() * pinkColors.length)],
+        swayPhase: Math.random() * Math.PI * 2,
+        swaySpeed: 0.005 + Math.random() * 0.01
+      });
+    }
+
+    function updateAndDraw(ctx, particles) {
+      ctx.clearRect(0, 0, W, H);
+      for (let i = 0; i < particles.length; i++) {
+        const p = particles[i];
+        p.swayPhase += p.swaySpeed;
+        p.ry += p.speedY;
+        p.rx += p.speedX + Math.sin(p.swayPhase) * 0.0002;
+
+        // 飘出屏幕底部后，从顶部重新进来
+        if (p.ry > 1.05) {
+          p.ry = -0.05;
+          p.rx = Math.random();
+        }
+        // 左右出界就回弹
+        if (p.rx < -0.05) p.rx = 1.05;
+        if (p.rx > 1.05) p.rx = -0.05;
+
+        const x = p.rx * W;
+        const y = p.ry * H;
+        drawHeart(ctx, x, y, p.size, p.color, p.alpha);
+      }
+    }
+
+    (function animate() {
+      updateAndDraw(bgCtx, backParticles);
+      updateAndDraw(fgCtx, frontParticles);
+      requestAnimationFrame(animate);
+    })();
+  }
+
+  /* ==========================================================
+   *  五·八、卡片 3D 倾斜（鼠标跟随，参考代码 rotateX/rotateY）
+   *  角度取 14° 更柔和；离开复位，保留 hover 上浮
+   * ========================================================== */
+  function setupTilt() {
+    const maxDeg = 14;
+    document.querySelectorAll('.card').forEach(card => {
+      card.addEventListener('mousemove', (e) => {
+        const r = card.getBoundingClientRect();
+        const x = (e.clientX - r.left) / r.width - 0.5;
+        const y = (e.clientY - r.top) / r.height - 0.5;
+        card.style.transform =
+          'perspective(600px) rotateY(' + (x * maxDeg) + 'deg) rotateX(' + (-y * maxDeg) + 'deg) translateY(-3px)';
+      });
+      card.addEventListener('mouseleave', () => {
+        card.style.transform = '';
+      });
+    });
+  }
+
+  /* ==========================================================
+   *  五·九、目标日期折叠：默认隐藏，点击卡片展开/收起
+   *  借鉴手风琴 max-height 展开效果（不借鉴样式）
+   * ========================================================== */
+  function setupDateToggle() {
+    const pairs = [
+      ['user1-card', 'user1-date'],
+      ['anniversary-card', 'anniversary-subdate'],
+      ['user2-card', 'user2-date']
+    ];
+    pairs.forEach(function (p) {
+      const card = el(p[0]);
+      const dateEl = el(p[1]);
+      if (!card || !dateEl) return;
+      card.addEventListener('click', function () {
+        dateEl.classList.toggle('open');
+      });
+    });
   }
 
   /* ==========================================================
@@ -284,40 +562,69 @@
     const wishEl = el('overlay-wish');
     wishEl.textContent = wishTexts.join('  ');
 
-    // 先清空旧粒子
-    overlay.querySelectorAll('.confetti').forEach(n => n.remove());
-    // 随机生成 80 片礼花
-    const colors = ['#ff8fab', '#ffb3c1', '#ffd6a5', '#ffe066', '#a0c4ff', '#b9fbc0', '#e0aaff'];
-    for (let i = 0; i < 80; i++) {
-      const c = document.createElement('div');
-      c.className = 'confetti';
-      c.style.left = Math.random() * 100 + 'vw';
-      c.style.background = colors[Math.floor(Math.random() * colors.length)];
-      c.style.animationDuration = (2.5 + Math.random() * 2.5) + 's';
-      c.style.animationDelay = (Math.random() * 1.2) + 's';
-      c.style.transform = 'rotate(' + Math.random() * 360 + 'deg)';
-      overlay.appendChild(c);
-    }
+    // 清掉上一次的粒子画布
+    overlay.querySelectorAll('.cv').forEach(n => n.remove());
 
+    // canvas 粒子爆发（参考代码：中心发射 + 重力 + 随机色，另加淡出）
+    // 先让 overlay 显示出来，否则 clientWidth/Height 是 0
     overlay.classList.add('show');
+    const cv = document.createElement('canvas');
+    cv.className = 'cv';
+    overlay.appendChild(cv);
+    const W = window.innerWidth;
+    const H = window.innerHeight;
+    cv.width = W;
+    cv.height = H;
+    const ctx = cv.getContext('2d');
+    const cx = W / 2;
+    const cy = H / 2;
+    const particles = [];
+    for (let i = 0; i < 250; i++) {
+      particles.push({
+        x: cx,
+        y: cy,
+        vx: (Math.random() - 0.5) * 14,
+        vy: Math.random() * -18 - 3,
+        g: 0.3,
+        size: 6 + Math.random() * 8,        // 6~14px，更大
+        life: 1,
+        c: 'hsl(' + Math.floor(Math.random() * 360) + ' 90% 60%)'
+      });
+    }
+    let running = true;
+    function draw() {
+      if (!running) return;
+      ctx.clearRect(0, 0, W, H);
+      for (let i = 0; i < particles.length; i++) {
+        const p = particles[i];
+        p.vy += p.g;
+        p.x += p.vx;
+        p.y += p.vy;
+        p.life -= 0.006;
+        ctx.globalAlpha = Math.max(0, p.life);
+        ctx.fillStyle = p.c;
+        ctx.fillRect(p.x, p.y, p.size, p.size * 0.6);   // 长方形纸屑，更像真实彩纸
+      }
+      ctx.globalAlpha = 1;
+      requestAnimationFrame(draw);
+    }
+    draw();
+
     // 3~5 秒后自动消失
     setTimeout(() => {
       overlay.classList.remove('show');
+      running = false;
+      cv.remove();
     }, 4200);
   }
 
   function maybeTriggerBirthdayEffect() {
-    const today = todayBeijing();
-    const key = 'bday_fired_' + today.year + '-' + today.month + '-' + today.day;
-    if (localStorage.getItem(key)) return; // 今天已经弹过
-
     const wishes = [];
     if (isBirthdayToday(CONFIG.user1)) wishes.push(CONFIG.user1.birthdayWish);
     if (isBirthdayToday(CONFIG.user2)) wishes.push(CONFIG.user2.birthdayWish);
     if (wishes.length === 0) return;
 
     fireConfetti(wishes);
-    try { localStorage.setItem(key, '1'); } catch (e) { /* 隐私模式下忽略 */ }
   }
 
   /* ==========================================================
@@ -331,7 +638,7 @@
 
     const inner = document.createElement('span');
     inner.className = 'quote-text';
-    inner.textContent = '“' + text + '”';
+    inner.textContent = text;
     container.appendChild(inner);
 
     // 等下一帧测量宽度，超容器就加跑马灯
@@ -432,12 +739,50 @@
   document.addEventListener('DOMContentLoaded', function () {
     document.title = CONFIG.pageTitle;
 
-    // 把名字填到卡片标题
-    el('user1-label').textContent = '距离' + CONFIG.user1.name + '的生日';
-    el('user2-label').textContent = '距离' + CONFIG.user2.name + '的生日';
-    el('anniversary-label').textContent = CONFIG.anniversary.title;
+    // 把名字填到卡片标题，并依次启动乱码解码动画（顶部→中部→底部，错峰 200ms）
+    const labelJobs = [
+      { el: el('user1-label'), text: '距离' + CONFIG.user1.name + '的生日', delay: 0 },
+      { el: el('anniversary-label'), text: CONFIG.anniversary.title, delay: 200 },
+      { el: el('user2-label'), text: '距离' + CONFIG.user2.name + '的生日', delay: 400 }
+    ];
+    labelJobs.forEach(job => {
+      job.el.textContent = job.text;
+      setTimeout(() => scrambleDecode(job.el, job.text), job.delay);
+    });
 
+    /* ---------- 页面加载：所有数字 count-up 滚动 ---------- */
+
+    // 1) 超大天数：整体从 0 滚动到真实值
+    const a = CONFIG.anniversary;
+    const targetDays = Math.max(0, Math.floor(
+      (nowBeijingMs() - beijingDateToMs(a.year, a.month, a.day, a.hour, a.minute, a.second)) / 86400000
+    ));
+    countUpSingle(el('anniversary-days'), targetDays, LOAD_DURATION, () => {
+      // 静默对齐实时值：恢复逐位渲染时不触发 digitChange，避免"停了又跳一下"
+      suppressDigitAnim = true;
+      renderAnniversary();
+      suppressDigitAnim = false;
+    });
+
+    // 2) 生日倒计时：天→时→分→秒 依次错峰滚动
+    startCountUpTime('user1', CONFIG.user1);
+    startCountUpTime('user2', CONFIG.user2);
+
+    // 3) 今日已过去的时分秒：时→分→秒 依次错峰滚动（秒位动态追实时值）
+    countUpTimeSegments(el('anniversary-subtime'), () => todayElapsedHMS(), () => {
+      suppressDigitAnim = true;
+      renderAnniversary();
+      suppressDigitAnim = false;
+    });
+
+    // 动画标记已全部设置，立即渲染一次：日期/起始日期马上显示（时间容器由动画接管，不会被覆盖）
     tick();
+
+    // 背景爱心粒子云 / 卡片 3D 倾斜 / 目标日期点击折叠
+    initBgParticles();
+    setupTilt();
+    setupDateToggle();
+
     setInterval(tick, 1000);
 
     loadLoveQuote();

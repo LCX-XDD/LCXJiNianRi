@@ -15,6 +15,12 @@
 </head>
 <body>
 
+  <!-- 背景爱心粒子（后层，卡片后面） -->
+  <canvas class="bg-canvas" id="bg-canvas"></canvas>
+
+  <!-- 前置漂浮爱心（前层，卡片前面，若隐若现） -->
+  <canvas class="fg-canvas" id="fg-canvas"></canvas>
+
   <!-- 外层毛玻璃容器：把三张卡片包成一个整体，居中显示 -->
   <main class="wrapper">
 
@@ -82,7 +88,7 @@
     <div class="wish" id="overlay-wish"></div>
   </div>
 
-  <!-- 配置文件必须先引入，主逻辑后引入 -->
+  <!-- 配置文件先引入，主逻辑后引入 -->
   <script src="js/config.js"></script>
   <script src="js/script.js"></script>
 </body>
