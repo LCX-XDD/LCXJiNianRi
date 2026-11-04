@@ -636,9 +636,15 @@
     container.innerHTML = '';
     container.classList.remove('marquee');
 
+    // 所有文案末尾句号都去掉
+    let displayText = text.trim();
+    if (displayText.endsWith('。')) {
+      displayText = displayText.slice(0, -1);
+    }
+
     const inner = document.createElement('span');
     inner.className = 'quote-text';
-    inner.textContent = text;
+    inner.textContent = displayText;
     container.appendChild(inner);
 
     // 等下一帧测量宽度，超容器就加跑马灯
@@ -646,7 +652,7 @@
       const cw = container.clientWidth;
       const iw = inner.scrollWidth;
       if (iw > cw + 4) {
-        // 包一层 marquee-inner，放两份文本，整体左移 -50% 实现无缝循环
+        // 长文案：包一层 track，放两份文本循环跑马灯
         container.innerHTML = '';
         const track = document.createElement('span');
         track.className = 'marquee-track';
@@ -657,6 +663,7 @@
         container.appendChild(track);
         container.classList.add('marquee');
       }
+      // 短文案：保持居中（justify-content: center 已在 CSS 里设置）
     });
   }
 

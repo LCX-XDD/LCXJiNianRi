@@ -243,22 +243,25 @@ body {
   font-size: clamp(11px, 2vh, 14px);
   line-height: 1.6;
   color: #6b1f3a;
-  padding: clamp(4px, 1vh, 6px) 12px 2px;
+  padding: 0 12px;
   letter-spacing: 0.5px;
   flex-shrink: 0;
   max-width: 100%;
   font-weight: 500;
   height: 1.8em;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  align-items: center;      /* 垂直居中 */
+  justify-content: center;   /* 水平居中 */
   overflow: hidden;
   position: relative;
   white-space: nowrap;
 }
 .love-quote .quote-text {
   display: inline-block;
-  padding-right: 3em;   /* 两段之间的间隔 */
+}
+/* 跑马灯模式下，两段文案之间留间隔 */
+.love-quote.marquee .quote-text {
+  padding-right: 3em;
 }
 
 /* 长文案跑马灯：track 整体从右往左循环 */
